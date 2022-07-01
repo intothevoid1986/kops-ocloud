@@ -1,0 +1,81 @@
+---
+cloudProvider: openstack
+clusterName: &clusterName my-cluster-2
+dnsZone: &dnsZone k8s.local
+kubernetesVersion: 1.23.8
+network:
+  CIDR: 10.0.2.0/24
+  nonMasqueradeCIDR: 100.64.2.0/10
+  sshAccess:
+    - 0.0.0.0/0
+    - ::/0
+  kubernetesApiAccess:
+    - 0.0.0.0/0
+    - ::/0
+  utility:
+    CIDR: 10.0.2.0/30
+    name: utility-nova
+    type: Utility
+  subnet:
+    CIDR: 10.0.2.32/27
+    name: &subnetName nova
+    type: Private
+  provider: calico
+  az: nova
+  topology:
+    dns: Public
+    masters: public
+    nodes: private
+certmanager:
+  enabled: true
+  issuer: letsencrypt
+openstack:
+  blockStorage:
+    version: v2
+    volumeAz: it-mil1
+  router:
+    externalNetwork: PublicNetwork
+  configBucket: swift://kops/my-cluster-2.k8s.local
+master:
+  type: &instanceType e3standard.x3
+  image: &instanceImage automium
+  rootVolumeSize: &instanceVolumeSize 100
+  list:
+    - instance:
+      clusterName: *clusterName
+      dnsZone: *dnsZone
+      subnetName: *subnetName
+      image: *instanceImage
+      group: master-nova-1
+      name: etcd-1
+      type: *instanceType
+      role: Master
+      rootVolumeSize: *instanceVolumeSize
+    - instance:
+      clusterName: *clusterName
+      dnsZone: *dnsZone
+      subnetName: *subnetName
+      image: *instanceImage
+      group: master-nova-2
+      name: etcd-2
+      type: *instanceType
+      role: Master
+      rootVolumeSize: *instanceVolumeSize
+    - instance:
+      clusterName: *clusterName
+      dnsZone: *dnsZone
+      subnetName: *subnetName
+      image: *instanceImage
+      group: master-nova-3
+      name: etcd-3
+      type: *instanceType
+      role: Master
+      rootVolumeSize: *instanceVolumeSize
+node:
+  image: automium
+  role: Node
+  name: nodes-nova
+  machineType: e3standard.x4
+  rootVolumeSize: 200
+  maxSize: 3
+  minSize: 3

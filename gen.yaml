@@ -1,0 +1,155 @@
+apiVersion: kops.k8s.io/v1alpha2
+kind: Cluster
+metadata:
+  name: my-cluster-2.k8s.local
+spec:
+  api: {}
+  authorization:
+    rbac: {}
+  certManager:
+    defaultIssuer: letsencrypt
+    enabled: true
+  channel: stable
+  cloudConfig:
+    openstack:
+      blockStorage:
+        bs-version: v2
+        ignore-volume-az: true
+        override-volume-az: it-mil1
+      monitor:
+        delay: 15s
+        maxRetries: 3
+        timeout: 10s
+      router:
+        externalNetwork: PublicNetwork
+  cloudProvider: openstack
+  configBase: null
+  etcdClusters:
+  - cpuRequest: 200m
+    etcdMembers:
+    - instanceGroup: master-nova-1
+      name: etcd-1
+    - instanceGroup: master-nova-2
+      name: etcd-2
+    - instanceGroup: master-nova-3
+      name: etcd-3
+    memoryRequest: 100Mi
+    name: main
+  - cpuRequest: 100m
+    etcdMembers:
+    - instanceGroup: master-nova-1
+      name: etcd-1
+    - instanceGroup: master-nova-2
+      name: etcd-2
+    - instanceGroup: master-nova-3
+      name: etcd-3
+    memoryRequest: 100Mi
+    name: events
+  iam:
+    allowContainerRegistry: true
+    legacy: false
+  kubelet:
+    anonymousAuth: false
+  kubernetesApiAccess:
+  - 0.0.0.0/0
+  - ::/0
+  kubernetesVersion: 1.23.8
+  masterPublicName: api.my-cluster-2.k8s.local
+  networkCIDR: 10.0.2.0/24
+  networking:
+    calico: {}
+  nonMasqueradeCIDR: 100.64.2.0/10
+  sshAccess:
+  - 0.0.0.0/0
+  - ::/0
+  sshKeyName: my-cluster-2
+  subnets:
+  - cidr: 10.0.2.32/27
+    name: nova
+    type: Private
+    zone: nova
+  - cidr: 10.0.2.0/30
+    name: utility-nova
+    type: Utility
+    zone: nova
+  topology:
+    dns:
+      type: Public
+    masters: public
+    nodes: private
+---
+apiVersion: kops.k8s.io/v1alpha2
+kind: InstanceGroup
+metadata:
+  labels:
+    kops.k8s.io/cluster: my-cluster-2.k8s.local
+  name: master-nova-1
+spec:
+  image: automium
+  machineType: e3standard.x3
+  manager: CloudGroup
+  maxSize: 1
+  minSize: 1
+  nodeLabels:
+    kops.k8s.io/instancegroup: master-nova-1
+  role: Master
+  rootVolumeSize: 100
+  subnets:
+  - nova
+---
+apiVersion: kops.k8s.io/v1alpha2
+kind: InstanceGroup
+metadata:
+  labels:
+    kops.k8s.io/cluster: my-cluster-2.k8s.local
+  name: master-nova-2
+spec:
+  image: automium
+  machineType: e3standard.x3
+  manager: CloudGroup
+  maxSize: 1
+  minSize: 1
+  nodeLabels:
+    kops.k8s.io/instancegroup: master-nova-2
+  role: Master
+  rootVolumeSize: 100
+  subnets:
+  - nova
+---
+apiVersion: kops.k8s.io/v1alpha2
+kind: InstanceGroup
+metadata:
+  labels:
+    kops.k8s.io/cluster: my-cluster-2.k8s.local
+  name: master-nova-3
+spec:
+  image: automium
+  machineType: e3standard.x3
+  manager: CloudGroup
+  maxSize: 1
+  minSize: 1
+  nodeLabels:
+    kops.k8s.io/instancegroup: master-nova-3
+  role: Master
+  rootVolumeSize: 100
+  subnets:
+  - nova
+---
+apiVersion: kops.k8s.io/v1alpha2
+kind: InstanceGroup
+metadata:
+  labels:
+    kops.k8s.io/cluster: my-cluster-2.k8s.local
+  name: nodes-nova
+spec:
+  image: automium
+  machineType: e3standard.x4
+  manager: CloudGroup
+  maxSize: 3
+  minSize: 3
+  nodeLabels:
+    kops.k8s.io/instancegroup: nodes-nova
+  role: Node
+  rootVolumeSize: 200
+  subnets:
+  - nova

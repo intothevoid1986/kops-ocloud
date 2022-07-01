@@ -1,0 +1,109 @@
+apiVersion: kops.k8s.io/v1alpha2
+kind: Cluster
+metadata:
+  name: {{ .clusterName }}.{{ .dnsZone }}
+spec:
+  certManager:
+    enabled: {{ .certmanager.enabled }}
+    defaultIssuer: {{ .certmanager.issuer }}
+  sshKeyName: {{ .clusterName }}
+  api: {}
+  authorization:
+    rbac: {}
+  channel: stable
+  cloudConfig:
+    openstack:
+      blockStorage:
+        bs-version: {{ .openstack.blockStorage.version }}
+        ignore-volume-az: true
+        override-volume-az: {{ .openstack.blockStorage.volumeAz }}
+      monitor:
+        delay: 15s
+        maxRetries: 3
+        timeout: 10s
+      router:
+        externalNetwork: {{ .openstack.router.externalNetwork }}
+  cloudProvider: {{ .cloudProvider }}
+  configBase: 
+  etcdClusters:
+  - cpuRequest: 200m
+    etcdMembers:{{range $i, $e := .master.list}}
+    - instanceGroup: {{ $e.group }}
+      name: {{ $e.name }}{{end}}
+    memoryRequest: 100Mi
+    name: main
+  - cpuRequest: 100m
+    etcdMembers:{{range $i, $e := .master.list}}
+    - instanceGroup: {{ $e.group }}
+      name: {{ $e.name }}{{end}}
+    memoryRequest: 100Mi
+    name: events
+  iam:
+    allowContainerRegistry: true
+    legacy: false
+  kubelet:
+    anonymousAuth: false
+  kubernetesApiAccess: {{ .network.kubernetesApiAccess | toJson }}
+  kubernetesVersion: {{ .kubernetesVersion }}
+  masterPublicName: api.{{ .clusterName }}.{{ .dnsZone }}
+  networkCIDR: {{ .network.CIDR }}
+  networking:
+    {{ .network.provider }}: {}
+  nonMasqueradeCIDR: {{ .network.nonMasqueradeCIDR }}
+  sshAccess: {{ .network.sshAccess | toJson }}
+  subnets:
+  - cidr: {{ .network.subnet.CIDR }}
+    name: {{ .network.subnet.name }}
+    type: {{ .network.subnet.type }}
+    zone: {{ .network.az }}
+  - cidr: {{ .network.utility.CIDR }}
+    name: {{ .network.utility.name }}
+    type: {{ .network.utility.type }}
+    zone: {{ .network.az }}
+  topology:
+    dns:
+      type: {{ .network.topology.dns }}
+    masters: {{ .network.topology.masters }}
+    nodes: {{ .network.topology.nodes }}
+
+---
+{{ range $i, $e := .master.list }}
+apiVersion: kops.k8s.io/v1alpha2
+kind: InstanceGroup
+metadata:
+  labels:
+    kops.k8s.io/cluster: {{ $e.clusterName }}.{{ $e.dnsZone }}
+  name: {{ $e.group }}
+spec:
+  image: {{ $e.image }}
+  machineType: {{ $e.type }}
+  manager: CloudGroup
+  maxSize: 1
+  minSize: 1
+  rootVolumeSize: {{ $e.rootVolumeSize }}
+  nodeLabels:
+    kops.k8s.io/instancegroup: {{ $e.group }}
+  role: {{ $e.role }}
+  subnets:
+  - {{ $e.subnetName }}
+
+---
+{{end}}
+apiVersion: kops.k8s.io/v1alpha2
+kind: InstanceGroup
+metadata:
+  labels:
+    kops.k8s.io/cluster: {{ .clusterName }}.{{ .dnsZone }}
+  name: {{ .node.name }}
+spec:
+  image: {{ .node.image }}
+  machineType: {{ .node.machineType }}
+  manager: CloudGroup
+  maxSize: {{ .node.maxSize}}
+  minSize: {{ .node.minSize}}
+  rootVolumeSize: {{ .node.rootVolumeSize }}
+  nodeLabels:
+    kops.k8s.io/instancegroup: {{ .node.name }}
+  role: {{ .node.role }}
+  subnets:
+  - {{ .network.subnet.name }}
